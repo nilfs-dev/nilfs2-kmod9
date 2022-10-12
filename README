@@ -1,0 +1,31 @@
+* Required packages
+
+- gcc
+- make
+- binutils
+- kernel-devel
+
+You also need to install nilfs-utils package.  The garbage collector
+of NILFS, snapshot management tools, man-pages, and other filesystem
+administration tools, are included in the package.
+
+* Supported Linux distributions
+
+- CentOS 9 Stream
+- AlmaLinux 9
+- Rocky Linux 9
+
+* How to get development sources
+
+ $ cd your-work-directory
+ $ git clone https://github.com/nilfs-dev/nilfs2-kmod9.git
+
+* How to compile
+
+ $ cd nilfs2-kmod9
+ $ make
+
+* How to install
+
+ $ sudo make install
+
