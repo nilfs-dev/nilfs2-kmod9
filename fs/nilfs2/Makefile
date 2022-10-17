@@ -21,6 +21,7 @@ ifneq ($(CONFIG_NILFS_DEBUG),)
   KBUILD_CFLAGS += -g -fno-omit-frame-pointer
 endif
 
+USERINCLUDE += -I../../include/uapi
 LINUXINCLUDE += -I../../include
 
 #
@@ -48,7 +49,7 @@ KSRC := /lib/modules/$(KVER)/build
 MDIR := /lib/modules/$(KVER)/kernel/fs/nilfs2/
 PWD := $(shell pwd)
 
-PREINC := -I$(PWD)/../../include
+PREINC := -I$(PWD)/../../include -I$(PWD)/../../include/uapi
 CFLAGS += -Wall
 
 default:
