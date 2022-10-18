@@ -35,6 +35,7 @@
 #include <linux/writeback.h>
 #include <linux/seq_file.h>
 #include <linux/mount.h>
+#include "kern_feature.h"
 #include "nilfs.h"
 #include "export.h"
 #include "mdt.h"
@@ -1055,7 +1056,11 @@ nilfs_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_time_gran = 1;
 	sb->s_max_links = NILFS_LINK_MAX;
 
+#if HAVE_BD_BDI
 	sb->s_bdi = bdi_get(sb->s_bdev->bd_bdi);
+#else
+	sb->s_bdi = bdi_get(sb->s_bdev->bd_disk->bdi);
+#endif
 
 	err = load_nilfs(nilfs, sb);
 	if (err)
