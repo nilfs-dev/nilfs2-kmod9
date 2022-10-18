@@ -20,9 +20,13 @@
  */
 #if defined(RHEL_MAJOR) && (RHEL_MAJOR == 9)
 # if defined(RHEL_RELEASE_N)
-#  define	HAVE_BD_BDI			(RHEL_RELEASE_N < 34)
+#  if (RHEL_RELEASE_N >= 34)
+#   define	HAVE_BD_BDI			0
+#   define	HAVE_BDEV_NR_BYTES		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
+#  define	HAVE_BDEV_NR_BYTES		1
 # endif
 #endif
 
@@ -41,6 +45,24 @@
 # define HAVE_BD_BDI \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
 #endif
+/*
+ * bdev_nr_bytes() helper was added in kernel 5.15.
+ */
+#ifndef HAVE_BDEV_NR_BYTES
+# define HAVE_BDEV_NR_BYTES \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
+
+
+#include <linux/blkdev.h>
+#include <linux/fs.h>
+
+#if !HAVE_BDEV_NR_BYTES
+static inline loff_t bdev_nr_bytes(struct block_device *bdev)
+{
+	return i_size_read(bdev->bd_inode);
+}
+#endif
 
 #endif /* NILFS_KERN_FEATURE_H */
