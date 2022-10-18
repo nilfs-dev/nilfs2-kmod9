@@ -24,6 +24,7 @@
 #   define	HAVE_BD_BDI			0
 #   define	HAVE_BDEV_NR_BYTES		1
 #  endif
+#  define	HAVE_ALLOC_INODE_SB		(RHEL_RELEASE_N >= 92)
 #  if (RHEL_RELEASE_N >= 120)
 #   define	HAVE_NEW_BIO_ALLOC		1
 #   define	HAVE_BD_SPLIT_DISCARD		1
@@ -36,6 +37,7 @@
 #   define	HAVE_NEW_BIO_ALLOC		1
 #   define	HAVE_BD_SPLIT_DISCARD		1
 #   define	HAVE_BDEV_DISCARD_HELPERS	1
+#   define	HAVE_ALLOC_INODE_SB		1
 #  endif
 # endif
 #endif
@@ -86,6 +88,14 @@
 # define HAVE_BDEV_DISCARD_HELPERS \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
 #endif
+/*
+ * alloc_inode_sb() was introduced to allocate filesystem specific
+ * inode in kernel 5.18.
+ */
+#ifndef HAVE_ALLOC_INODE_SB
+# define HAVE_ALLOC_INODE_SB \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -120,6 +130,14 @@ static inline unsigned int bdev_max_discard_sectors(struct block_device *bdev)
 static inline unsigned int bdev_discard_granularity(struct block_device *bdev)
 {
 	return bdev_get_queue(bdev)->limits.discard_granularity;
+}
+#endif
+
+#if !HAVE_ALLOC_INODE_SB
+static inline void *
+alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache, gfp_t gfp)
+{
+	return kmem_cache_alloc(cache, gfp);
 }
 #endif
 
