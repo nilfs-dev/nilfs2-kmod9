@@ -65,7 +65,7 @@ PREINC := -I$(PWD)/../../include -I$(PWD)/../../include/uapi
 CFLAGS += -Wall
 
 default:
-	$(MAKE) -C $(KSRC) NOSTDINC_FLAGS=$(PREINC) modules
+	$(MAKE) -C $(KSRC) NOSTDINC_FLAGS="$(PREINC)" modules
 
 install: unload
 	install -d $(MDIR)
