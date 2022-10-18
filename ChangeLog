@@ -1,0 +1,47 @@
+nilfs2-kmod9-1.0  Tue Oct 18, 2022 JST
+
+	* support for conditional builds by RHEL 9 kernel version:
+	  - nilfs2-kmod9: pass RHEL release number to preprocessor
+	  - Allow to remove the bd_bdi in struct block_device
+	  - Allow to use bdev_nr_bytes() helper
+	  - Allow to pass a block_device and opf to bio_alloc
+	  - Allow to split secure erase from discard
+	  - Use bdev_max_discard_sectors() and bdev_discard_granularity()
+	  - Allow to use alloc_inode_sb() for inode allocation
+	* backport bug fixes:
+	  - nilfs2: replace WARN_ONs by nilfs_error for checkpoint acquisition
+	    failure
+	  - nilfs2: fix use-after-free bug of struct nilfs_root
+	  - nilfs2: fix NULL pointer dereference at
+	    nilfs_bmap_lookup_at_level()
+	  - nilfs2: fix leak of nilfs_root in case of writer thread creation
+	    failure
+	  - nilfs2: fix null pointer dereference at
+	    nilfs_segctor_do_construct()
+	  - nilfs2: fix memory leak in nilfs_sysfs_create_device_group
+	  - nilfs2: fix NULL pointer in nilfs_##name##_attr_release
+	  - nilfs2: fix memory leak in nilfs_sysfs_create_##name##_group
+	  - nilfs2: fix memory leak in nilfs_sysfs_delete_##name##_group
+	  - nilfs2: fix memory leak in nilfs_sysfs_create_snapshot_group
+	  - nilfs2: fix memory leak in nilfs_sysfs_delete_snapshot_group
+	  - nilfs2: use refcount_dec_and_lock() to fix potential UAF
+	  - nilfs2: fix lockdep warnings in page operations for btree nodes
+	  - nilfs2: fix lockdep warnings during disk space reclamation
+	  - nilfs2: get rid of nilfs_mapping_init()
+	  - nilfs2: fix incorrect masking of permission flags for symlinks
+	  - nilfs2: fix use-after-free bug in nilfs_mdt_destroy()
+	* backport other changes:
+	  - nilfs2: remove nilfs_alloc_seg_bio
+	  - nilfs2: replace snprintf in show functions with sysfs_emit
+	  - nilfs2: remove filenames from file comments
+	  - nilfs2: use default_groups in kobj_type
+	* Makefile updates:
+	  - nilfs2-kmod9: include header files in local include/uapi directory
+	  - Use KBUILD_EXTMOD instead of SUBDIRS in fs/nilfs2/Makefile
+	  - Use KBUILD_CFLAGS and LINUXINCLUDE instead of EXTRA_CFLAGS
+	* add kern_feature.h header file
+	* add makefiles
+	* add COPYING file
+	* add README file
+	* add .gitignore file
+	* Import source files from Linux kernel 5.14.
