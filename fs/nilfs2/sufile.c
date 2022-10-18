@@ -13,6 +13,7 @@
 #include <linux/string.h>
 #include <linux/buffer_head.h>
 #include <linux/errno.h>
+#include "kern_feature.h"
 #include "mdt.h"
 #include "sufile.h"
 
@@ -1097,7 +1098,8 @@ int nilfs_sufile_trim_fs(struct inode *sufile, struct fstrim_range *range)
 			if (nblocks >= minlen) {
 				kunmap_atomic(kaddr);
 
-				ret = blkdev_issue_discard(nilfs->ns_bdev,
+				ret = compat_blkdev_issue_discard(
+					nilfs->ns_bdev,
 						start * sects_per_block,
 						nblocks * sects_per_block,
 						GFP_NOFS, 0);
@@ -1131,7 +1133,7 @@ int nilfs_sufile_trim_fs(struct inode *sufile, struct fstrim_range *range)
 			nblocks = end_block - start + 1;
 
 		if (nblocks >= minlen) {
-			ret = blkdev_issue_discard(nilfs->ns_bdev,
+			ret = compat_blkdev_issue_discard(nilfs->ns_bdev,
 					start * sects_per_block,
 					nblocks * sects_per_block,
 					GFP_NOFS, 0);

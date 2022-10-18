@@ -670,7 +670,7 @@ int nilfs_discard_segments(struct the_nilfs *nilfs, __u64 *segnump,
 		} else if (start + nblocks == seg_start) {
 			nblocks += seg_end - seg_start + 1;
 		} else {
-			ret = blkdev_issue_discard(nilfs->ns_bdev,
+			ret = compat_blkdev_issue_discard(nilfs->ns_bdev,
 						   start * sects_per_block,
 						   nblocks * sects_per_block,
 						   GFP_NOFS, 0);
@@ -680,7 +680,7 @@ int nilfs_discard_segments(struct the_nilfs *nilfs, __u64 *segnump,
 		}
 	}
 	if (nblocks)
-		ret = blkdev_issue_discard(nilfs->ns_bdev,
+		ret = compat_blkdev_issue_discard(nilfs->ns_bdev,
 					   start * sects_per_block,
 					   nblocks * sects_per_block,
 					   GFP_NOFS, 0);
