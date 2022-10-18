@@ -24,9 +24,15 @@
 #   define	HAVE_BD_BDI			0
 #   define	HAVE_BDEV_NR_BYTES		1
 #  endif
+#  if (RHEL_RELEASE_N >= 120)
+#   define	HAVE_NEW_BIO_ALLOC		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
+#  if (RHEL_MINOR > 0)				/* RHEL_RELEASE_N >= 71 */
+#   define	HAVE_NEW_BIO_ALLOC		1
+#  endif
 # endif
 #endif
 
@@ -51,6 +57,14 @@
 #ifndef HAVE_BDEV_NR_BYTES
 # define HAVE_BDEV_NR_BYTES \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+#endif
+/*
+ * The arguments of bio_alloc() was extended to recieve block_device,
+ * opf and operation in kernel 5.17.
+ */
+#ifndef HAVE_NEW_BIO_ALLOC
+# define HAVE_NEW_BIO_ALLOC \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
 #endif
 #endif /* LINUX_VERSION_CODE */
 
