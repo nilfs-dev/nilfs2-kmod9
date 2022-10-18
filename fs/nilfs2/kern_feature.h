@@ -27,6 +27,7 @@
 #  if (RHEL_RELEASE_N >= 120)
 #   define	HAVE_NEW_BIO_ALLOC		1
 #   define	HAVE_BD_SPLIT_DISCARD		1
+#   define	HAVE_BDEV_DISCARD_HELPERS	1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -34,6 +35,7 @@
 #  if (RHEL_MINOR > 0)				/* RHEL_RELEASE_N >= 71 */
 #   define	HAVE_NEW_BIO_ALLOC		1
 #   define	HAVE_BD_SPLIT_DISCARD		1
+#   define	HAVE_BDEV_DISCARD_HELPERS	1
 #  endif
 # endif
 #endif
@@ -76,6 +78,14 @@
 # define HAVE_BD_SPLIT_DISCARD \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
 #endif
+/*
+ * A few block_device based helpers were added in kernel 5.18 to
+ * abstract parameter retrieval for discard operations.
+ */
+#ifndef HAVE_BDEV_DISCARD_HELPERS
+# define HAVE_BDEV_DISCARD_HELPERS \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -100,5 +110,17 @@ compat_blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 	return blkdev_issue_discard(bdev, sector, nr_sects, gfp_mask, flags);
 #endif
 }
+
+#if !HAVE_BDEV_DISCARD_HELPERS
+static inline unsigned int bdev_max_discard_sectors(struct block_device *bdev)
+{
+	return bdev_get_queue(bdev)->limits.max_discard_sectors;
+}
+
+static inline unsigned int bdev_discard_granularity(struct block_device *bdev)
+{
+	return bdev_get_queue(bdev)->limits.discard_granularity;
+}
+#endif
 
 #endif /* NILFS_KERN_FEATURE_H */
