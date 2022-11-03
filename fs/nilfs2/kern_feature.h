@@ -30,6 +30,9 @@
 #   define	HAVE_BD_SPLIT_DISCARD		1
 #   define	HAVE_BDEV_DISCARD_HELPERS	1
 #  endif
+#  if (RHEL_RELEASE_N >= 183)
+#   define	HAVE_AOPS_INVALIDATE_FOLIO	1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -38,6 +41,9 @@
 #   define	HAVE_BD_SPLIT_DISCARD		1
 #   define	HAVE_BDEV_DISCARD_HELPERS	1
 #   define	HAVE_ALLOC_INODE_SB		1
+#  endif
+#  if (RHEL_MINOR > 1)				/* RHEL_RELEASE_N >= 163 */
+#   define	HAVE_AOPS_INVALIDATE_FOLIO	1
 #  endif
 # endif
 #endif
@@ -70,6 +76,15 @@
  */
 #ifndef HAVE_NEW_BIO_ALLOC
 # define HAVE_NEW_BIO_ALLOC \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#endif
+/*
+ * The invalidatepage operation was replaced with invalidate_folio
+ * in address space operations and block_invalidate_folio() was
+ * introduced to alter block_invalidatepage() in kernel 5.17.
+ */
+#ifndef HAVE_AOPS_INVALIDATE_FOLIO
+# define HAVE_AOPS_INVALIDATE_FOLIO \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
 #endif
 /*

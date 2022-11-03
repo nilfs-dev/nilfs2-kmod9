@@ -15,6 +15,7 @@
 #include <linux/writeback.h>
 #include <linux/uio.h>
 #include <linux/fiemap.h>
+#include "kern_feature.h"	/* aops->invalidate_folio */
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -308,7 +309,11 @@ const struct address_space_operations nilfs_aops = {
 	.write_begin		= nilfs_write_begin,
 	.write_end		= nilfs_write_end,
 	/* .releasepage		= nilfs_releasepage, */
+#if HAVE_AOPS_INVALIDATE_FOLIO
+	.invalidate_folio	= block_invalidate_folio,
+#else
 	.invalidatepage		= block_invalidatepage,
+#endif
 	.direct_IO		= nilfs_direct_IO,
 	.is_partially_uptodate  = block_is_partially_uptodate,
 };
