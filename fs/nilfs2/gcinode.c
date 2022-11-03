@@ -26,6 +26,7 @@
 #include <linux/hash.h>
 #include <linux/slab.h>
 #include <linux/swap.h>
+#include "kern_feature.h"	/* compat_submit_bh */
 #include "nilfs.h"
 #include "btree.h"
 #include "btnode.h"
@@ -92,7 +93,7 @@ int nilfs_gccache_submit_read_data(struct inode *inode, sector_t blkoff,
 	bh->b_blocknr = pbn;
 	bh->b_end_io = end_buffer_read_sync;
 	get_bh(bh);
-	submit_bh(REQ_OP_READ, 0, bh);
+	compat_submit_bh(REQ_OP_READ, 0, bh);
 	if (vbn)
 		bh->b_blocknr = vbn;
  out:

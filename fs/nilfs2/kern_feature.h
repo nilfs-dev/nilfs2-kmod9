@@ -33,6 +33,7 @@
 #  if (RHEL_RELEASE_N >= 183)
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
 #   define	HAVE_AOPS_DIRTY_FOLIO		1
+#   define	HAVE_BLK_OPF_T			1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -46,6 +47,7 @@
 #  if (RHEL_MINOR > 1)				/* RHEL_RELEASE_N >= 163 */
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
 #   define	HAVE_AOPS_DIRTY_FOLIO		1
+#   define	HAVE_BLK_OPF_T			1
 #  endif
 # endif
 #endif
@@ -121,11 +123,20 @@
 # define HAVE_ALLOC_INODE_SB \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
 #endif
+/*
+ * The request operation type and the request flags were combined and
+ * then replaced with blk_opf_t type in kernel 5.19.
+ */
+#ifndef HAVE_BLK_OPF_T
+# define HAVE_BLK_OPF_T \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
 #include <linux/blkdev.h>
 #include <linux/fs.h>
+#include <linux/buffer_head.h>
 
 #if !HAVE_BDEV_NR_BYTES
 static inline loff_t bdev_nr_bytes(struct block_device *bdev)
@@ -165,5 +176,15 @@ alloc_inode_sb(struct super_block *sb, struct kmem_cache *cache, gfp_t gfp)
 	return kmem_cache_alloc(cache, gfp);
 }
 #endif
+
+static inline int
+compat_submit_bh(int mode, int mode_flags, struct buffer_head *bh)
+{
+#if HAVE_BLK_OPF_T
+	return submit_bh(mode | mode_flags, bh);
+#else
+	return submit_bh(mode, mode_flags, bh);
+#endif
+}
 
 #endif /* NILFS_KERN_FEATURE_H */

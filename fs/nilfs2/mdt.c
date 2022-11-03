@@ -14,7 +14,7 @@
 #include <linux/backing-dev.h>
 #include <linux/swap.h>
 #include <linux/slab.h>
-#include "kern_feature.h"	/* aops->{dirty_folio,invalidate_folio} */
+#include "kern_feature.h"
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -149,7 +149,7 @@ nilfs_mdt_submit_block(struct inode *inode, unsigned long blkoff,
 
 	bh->b_end_io = end_buffer_read_sync;
 	get_bh(bh);
-	submit_bh(mode, mode_flags, bh);
+	compat_submit_bh(mode, mode_flags, bh);
 	ret = 0;
 
 	trace_nilfs2_mdt_submit_block(inode, inode->i_ino, blkoff, mode);
