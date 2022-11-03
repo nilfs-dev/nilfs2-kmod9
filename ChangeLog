@@ -1,3 +1,13 @@
+nilfs2-kmod9-1.1  Thu Nov 3, 2022 JST
+
+	* fix build issues on newer RHEL 9 kernels (RHEL_RELEASE >= 183):
+	  - Allow switching between invalidate_folio and invalidatepage
+	  - Allow switching between dirty_folio and set_page_dirty
+	  - Allow to combine submit_bh() arguments
+	  - Allow to remove bdi_write_congested()
+	* a Makefile correction:
+	  - fix NOSTDINC variable passing leak due to lack of quotes
+
 nilfs2-kmod9-1.0  Tue Oct 18, 2022 JST
 
 	* support for conditional builds by RHEL 9 kernel version:
