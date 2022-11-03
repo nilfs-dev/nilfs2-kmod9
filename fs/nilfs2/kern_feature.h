@@ -32,6 +32,7 @@
 #  endif
 #  if (RHEL_RELEASE_N >= 183)
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
+#   define	HAVE_AOPS_DIRTY_FOLIO		1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -44,6 +45,7 @@
 #  endif
 #  if (RHEL_MINOR > 1)				/* RHEL_RELEASE_N >= 163 */
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
+#   define	HAVE_AOPS_DIRTY_FOLIO		1
 #  endif
 # endif
 #endif
@@ -85,6 +87,14 @@
  */
 #ifndef HAVE_AOPS_INVALIDATE_FOLIO
 # define HAVE_AOPS_INVALIDATE_FOLIO \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#endif
+/*
+ * The set_page_dirty operation was replaced with dirty_folio in
+ * address space operations in kernel 5.17.
+ */
+#ifndef HAVE_AOPS_DIRTY_FOLIO
+# define HAVE_AOPS_DIRTY_FOLIO \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
 #endif
 /*

@@ -15,7 +15,7 @@
 #include <linux/writeback.h>
 #include <linux/uio.h>
 #include <linux/fiemap.h>
-#include "kern_feature.h"	/* aops->invalidate_folio */
+#include "kern_feature.h"	/* aops->{dirty_folio,invalidate_folio} */
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -204,6 +204,41 @@ static int nilfs_writepage(struct page *page, struct writeback_control *wbc)
 	return 0;
 }
 
+#if HAVE_AOPS_DIRTY_FOLIO
+static bool nilfs_dirty_folio(struct address_space *mapping,
+		struct folio *folio)
+{
+	struct inode *inode = mapping->host;
+	struct buffer_head *head;
+	unsigned int nr_dirty = 0;
+	bool ret = filemap_dirty_folio(mapping, folio);
+
+	/*
+	 * The page may not be locked, eg if called from try_to_unmap_one()
+	 */
+	spin_lock(&mapping->private_lock);
+	head = folio_buffers(folio);
+	if (head) {
+		struct buffer_head *bh = head;
+
+		do {
+			/* Do not mark hole blocks dirty */
+			if (buffer_dirty(bh) || !buffer_mapped(bh))
+				continue;
+
+			set_buffer_dirty(bh);
+			nr_dirty++;
+		} while (bh = bh->b_this_page, bh != head);
+	} else if (ret) {
+		nr_dirty = 1 << (folio_shift(folio) - inode->i_blkbits);
+	}
+	spin_unlock(&mapping->private_lock);
+
+	if (nr_dirty)
+		nilfs_set_file_dirty(inode, nr_dirty);
+	return ret;
+}
+#else
 static int nilfs_set_page_dirty(struct page *page)
 {
 	struct inode *inode = page->mapping->host;
@@ -239,6 +274,7 @@ static int nilfs_set_page_dirty(struct page *page)
 	}
 	return ret;
 }
+#endif
 
 void nilfs_write_failed(struct address_space *mapping, loff_t to)
 {
@@ -304,7 +340,11 @@ const struct address_space_operations nilfs_aops = {
 	.writepage		= nilfs_writepage,
 	.readpage		= nilfs_readpage,
 	.writepages		= nilfs_writepages,
+#if HAVE_AOPS_DIRTY_FOLIO
+	.dirty_folio		= nilfs_dirty_folio,
+#else
 	.set_page_dirty		= nilfs_set_page_dirty,
+#endif
 	.readahead		= nilfs_readahead,
 	.write_begin		= nilfs_write_begin,
 	.write_end		= nilfs_write_end,

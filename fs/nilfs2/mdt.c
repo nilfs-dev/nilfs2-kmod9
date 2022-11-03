@@ -14,7 +14,7 @@
 #include <linux/backing-dev.h>
 #include <linux/swap.h>
 #include <linux/slab.h>
-#include "kern_feature.h"	/* aops->invalidate_folio */
+#include "kern_feature.h"	/* aops->{dirty_folio,invalidate_folio} */
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -435,7 +435,11 @@ nilfs_mdt_write_page(struct page *page, struct writeback_control *wbc)
 
 
 static const struct address_space_operations def_mdt_aops = {
+#if HAVE_AOPS_DIRTY_FOLIO
+	.dirty_folio		= block_dirty_folio,
+#else
 	.set_page_dirty		= __set_page_dirty_buffers,
+#endif
 #if HAVE_AOPS_INVALIDATE_FOLIO
 	.invalidate_folio	= block_invalidate_folio,
 #endif
