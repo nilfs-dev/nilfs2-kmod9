@@ -341,6 +341,7 @@ static int nilfs_segbuf_submit_bio(struct nilfs_segment_buffer *segbuf,
 				   struct nilfs_write_info *wi)
 {
 	struct bio *bio = wi->bio;
+#if HAVE_BDI_WRITE_CONGESTED
 	int err;
 
 	if (segbuf->sb_nbio > 0 &&
@@ -353,6 +354,7 @@ static int nilfs_segbuf_submit_bio(struct nilfs_segment_buffer *segbuf,
 			goto failed;
 		}
 	}
+#endif
 
 	bio->bi_end_io = nilfs_end_bio_write;
 	bio->bi_private = segbuf;
@@ -365,9 +367,11 @@ static int nilfs_segbuf_submit_bio(struct nilfs_segment_buffer *segbuf,
 	wi->start = wi->end;
 	return 0;
 
+#if HAVE_BDI_WRITE_CONGESTED
  failed:
 	wi->bio = NULL;
 	return err;
+#endif
 }
 
 static void nilfs_segbuf_prepare_write(struct nilfs_segment_buffer *segbuf,

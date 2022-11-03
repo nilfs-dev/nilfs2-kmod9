@@ -33,6 +33,7 @@
 #  if (RHEL_RELEASE_N >= 183)
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
 #   define	HAVE_AOPS_DIRTY_FOLIO		1
+#   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
@@ -47,6 +48,7 @@
 #  if (RHEL_MINOR > 1)				/* RHEL_RELEASE_N >= 163 */
 #   define	HAVE_AOPS_INVALIDATE_FOLIO	1
 #   define	HAVE_AOPS_DIRTY_FOLIO		1
+#   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
 #  endif
 # endif
@@ -98,6 +100,13 @@
 #ifndef HAVE_AOPS_DIRTY_FOLIO
 # define HAVE_AOPS_DIRTY_FOLIO \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+#endif
+/*
+ * bdi_write_congested() was removed in kernel 5.18.
+ */
+#ifndef HAVE_BDI_WRITE_CONGESTED
+# define HAVE_BDI_WRITE_CONGESTED \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0))
 #endif
 /*
  * The secure erase operation was split out of discard operation
