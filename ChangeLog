@@ -1,3 +1,13 @@
+nilfs2-kmod9-1.3  Mon Dec 5, 2022 JST
+
+	* backport bug fixes:
+	  - nilfs2: fix nilfs_sufile_mark_dirty() not set segment usage as
+	    dirty
+	  - nilfs2: fix NULL pointer dereference in
+	    nilfs_palloc_commit_free_entry()
+	* a minor build fix:
+	  - build: treat .mod files as intermediate files
+
 nilfs2-kmod9-1.2  Sun Nov 20, 2022 JST
 
 	* backport bug fixes:
