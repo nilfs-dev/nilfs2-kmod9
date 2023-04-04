@@ -15,7 +15,7 @@
 #include <linux/writeback.h>
 #include <linux/uio.h>
 #include <linux/fiemap.h>
-#include "kern_feature.h"	/* aops->{dirty_folio,invalidate_folio} */
+#include "kern_feature.h"	/* aops->{dirty,invalidate,read}_folio */
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -140,6 +140,18 @@ int nilfs_get_block(struct inode *inode, sector_t blkoff,
 	return err;
 }
 
+#if HAVE_AOPS_READ_FOLIO
+/**
+ * nilfs_read_folio() - implement read_folio() method of nilfs_aops {}
+ * address_space_operations.
+ * @file - file struct of the file to be read
+ * @folio - the folio to be read
+ */
+static int nilfs_read_folio(struct file *file, struct folio *folio)
+{
+	return mpage_read_folio(folio, nilfs_get_block);
+}
+#else
 /**
  * nilfs_readpage() - implement readpage() method of nilfs_aops {}
  * address_space_operations.
@@ -150,6 +162,7 @@ static int nilfs_readpage(struct file *file, struct page *page)
 {
 	return mpage_readpage(page, nilfs_get_block);
 }
+#endif
 
 static void nilfs_readahead(struct readahead_control *rac)
 {
@@ -338,7 +351,11 @@ nilfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 
 const struct address_space_operations nilfs_aops = {
 	.writepage		= nilfs_writepage,
+#if HAVE_AOPS_READ_FOLIO
+	.read_folio		= nilfs_read_folio,
+#else
 	.readpage		= nilfs_readpage,
+#endif
 	.writepages		= nilfs_writepages,
 #if HAVE_AOPS_DIRTY_FOLIO
 	.dirty_folio		= nilfs_dirty_folio,

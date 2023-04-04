@@ -36,6 +36,9 @@
 #   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
 #  endif
+#  if (RHEL_RELEASE_N >= 293)
+#   define	HAVE_AOPS_READ_FOLIO		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -138,6 +141,14 @@
  */
 #ifndef HAVE_BLK_OPF_T
 # define HAVE_BLK_OPF_T \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
+#endif
+/*
+ * The readpage operation was replaced with read_folio in
+ * address space operations in kernel 5.19.
+ */
+#ifndef HAVE_AOPS_READ_FOLIO
+# define HAVE_AOPS_READ_FOLIO \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
 #endif
 #endif /* LINUX_VERSION_CODE */
