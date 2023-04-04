@@ -39,6 +39,7 @@
 #  if (RHEL_RELEASE_N >= 293)
 #   define	HAVE_AOPS_READ_FOLIO		1
 #   define	HAVE_WRITE_BEGIN_FLAGS		0
+#   define	HAVE_FILEMAP_GET_FOLIOS		1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -159,6 +160,14 @@
 #ifndef HAVE_WRITE_BEGIN_FLAGS
 # define HAVE_WRITE_BEGIN_FLAGS \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0))
+#endif
+/*
+ * filemap_get_folios() was added in kernel 6.0 to replace
+ * pagevec_lookup().
+ */
+#ifndef HAVE_FILEMAP_GET_FOLIOS
+# define HAVE_FILEMAP_GET_FOLIOS \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 #endif
 #endif /* LINUX_VERSION_CODE */
 

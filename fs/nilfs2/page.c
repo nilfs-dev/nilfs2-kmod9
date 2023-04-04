@@ -16,6 +16,7 @@
 #include <linux/highmem.h>
 #include <linux/pagevec.h>
 #include <linux/gfp.h>
+#include "kern_feature.h"
 #include "nilfs.h"
 #include "page.h"
 #include "mdt.h"
@@ -294,6 +295,62 @@ repeat:
 void nilfs_copy_back_pages(struct address_space *dmap,
 			   struct address_space *smap)
 {
+#if HAVE_FILEMAP_GET_FOLIOS
+	struct folio_batch fbatch;
+	unsigned int i, n;
+	pgoff_t start = 0;
+
+	folio_batch_init(&fbatch);
+repeat:
+	n = filemap_get_folios(smap, &start, ~0UL, &fbatch);
+	if (!n)
+		return;
+
+	for (i = 0; i < folio_batch_count(&fbatch); i++) {
+		struct folio *folio = fbatch.folios[i], *dfolio;
+		pgoff_t index = folio->index;
+
+		folio_lock(folio);
+		dfolio = filemap_lock_folio(dmap, index);
+		if (dfolio) {
+			/* overwrite existing folio in the destination cache */
+			WARN_ON(folio_test_dirty(dfolio));
+			nilfs_copy_page(&dfolio->page, &folio->page, 0);
+			folio_unlock(dfolio);
+			folio_put(dfolio);
+			/* Do we not need to remove folio from smap here? */
+		} else {
+			struct folio *f;
+
+			/* move the folio to the destination cache */
+			xa_lock_irq(&smap->i_pages);
+			f = __xa_erase(&smap->i_pages, index);
+			WARN_ON(folio != f);
+			smap->nrpages--;
+			xa_unlock_irq(&smap->i_pages);
+
+			xa_lock_irq(&dmap->i_pages);
+			f = __xa_store(&dmap->i_pages, index, folio, GFP_NOFS);
+			if (unlikely(f)) {
+				/* Probably -ENOMEM */
+				folio->mapping = NULL;
+				folio_put(folio);
+			} else {
+				folio->mapping = dmap;
+				dmap->nrpages++;
+				if (folio_test_dirty(folio))
+					__xa_set_mark(&dmap->i_pages, index,
+							PAGECACHE_TAG_DIRTY);
+			}
+			xa_unlock_irq(&dmap->i_pages);
+		}
+		folio_unlock(folio);
+	}
+	folio_batch_release(&fbatch);
+	cond_resched();
+
+	goto repeat;
+#else /* HAVE_FILEMAP_GET_FOLIOS */
 	struct pagevec pvec;
 	unsigned int i, n;
 	pgoff_t index = 0;
@@ -348,6 +405,7 @@ repeat:
 	cond_resched();
 
 	goto repeat;
+#endif /* HAVE_FILEMAP_GET_FOLIOS */
 }
 
 /**
