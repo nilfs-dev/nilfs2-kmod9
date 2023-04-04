@@ -12,6 +12,7 @@
 #include <linux/swap.h>
 #include <linux/slab.h>
 #include <linux/crc32.h>
+#include "kern_feature.h"
 #include "nilfs.h"
 #include "segment.h"
 #include "sufile.h"
@@ -511,7 +512,10 @@ static int nilfs_recover_dsync_blocks(struct the_nilfs *nilfs,
 
 		pos = rb->blkoff << inode->i_blkbits;
 		err = block_write_begin(inode->i_mapping, pos, blocksize,
-					0, &page, nilfs_get_block);
+#if HAVE_WRITE_BEGIN_FLAGS
+					0,
+#endif
+					&page, nilfs_get_block);
 		if (unlikely(err)) {
 			loff_t isize = inode->i_size;
 

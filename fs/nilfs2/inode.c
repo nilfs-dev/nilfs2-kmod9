@@ -300,9 +300,11 @@ void nilfs_write_failed(struct address_space *mapping, loff_t to)
 }
 
 static int nilfs_write_begin(struct file *file, struct address_space *mapping,
-			     loff_t pos, unsigned len, unsigned flags,
+			     loff_t pos, unsigned len,
+#if HAVE_WRITE_BEGIN_FLAGS
+			     unsigned flags,
+#endif
 			     struct page **pagep, void **fsdata)
-
 {
 	struct inode *inode = mapping->host;
 	int err = nilfs_transaction_begin(inode->i_sb, NULL, 1);
@@ -310,8 +312,11 @@ static int nilfs_write_begin(struct file *file, struct address_space *mapping,
 	if (unlikely(err))
 		return err;
 
-	err = block_write_begin(mapping, pos, len, flags, pagep,
-				nilfs_get_block);
+	err = block_write_begin(mapping, pos, len,
+#if HAVE_WRITE_BEGIN_FLAGS
+				flags,
+#endif
+				pagep, nilfs_get_block);
 	if (unlikely(err)) {
 		nilfs_write_failed(mapping, pos + len);
 		nilfs_transaction_abort(inode->i_sb);

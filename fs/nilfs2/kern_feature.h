@@ -38,6 +38,7 @@
 #  endif
 #  if (RHEL_RELEASE_N >= 293)
 #   define	HAVE_AOPS_READ_FOLIO		1
+#   define	HAVE_WRITE_BEGIN_FLAGS		0
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -150,6 +151,14 @@
 #ifndef HAVE_AOPS_READ_FOLIO
 # define HAVE_AOPS_READ_FOLIO \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0))
+#endif
+/*
+ * The flags argument was removed from block_write_begin helper function
+ * and write_begin operation of address space operations in kernel 5.19.
+ */
+#ifndef HAVE_WRITE_BEGIN_FLAGS
+# define HAVE_WRITE_BEGIN_FLAGS \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 19, 0))
 #endif
 #endif /* LINUX_VERSION_CODE */
 
