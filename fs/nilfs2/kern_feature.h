@@ -75,11 +75,11 @@
 	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
 #endif
 /*
- * bdev_nr_bytes() helper was added in kernel 5.15.
+ * bdev_nr_bytes() and sb_bdev_nr_blocks() helpers were added in kernel 5.16.
  */
 #ifndef HAVE_BDEV_NR_BYTES
 # define HAVE_BDEV_NR_BYTES \
-	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0))
 #endif
 /*
  * The arguments of bio_alloc() was extended to recieve block_device,
@@ -180,6 +180,11 @@
 static inline loff_t bdev_nr_bytes(struct block_device *bdev)
 {
 	return i_size_read(bdev->bd_inode);
+}
+
+static inline u64 sb_bdev_nr_blocks(struct super_block *sb)
+{
+	return (u64)bdev_nr_bytes(sb->s_bdev) >> sb->s_blocksize_bits;
 }
 #endif
 
