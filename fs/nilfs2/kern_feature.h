@@ -47,6 +47,7 @@
 #  if (RHEL_RELEASE_N >= 370)
 #   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
 #   define	HAVE_SB_S_MODE			0
+#   define	HAVE_BLK_MODE_T			1
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -72,6 +73,7 @@
 #  if (RHEL_MINOR > 3)				/* RHEL_RELEASE_N >= 363 */
 #   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
 #   define	HAVE_SB_S_MODE			0
+#   define	HAVE_BLK_MODE_T			1
 #  endif
 # endif
 #endif
@@ -210,6 +212,15 @@
 # define HAVE_SB_S_MODE \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0))
 #endif
+/*
+ * In kernel 6.5, regarding block open flags, fmode_t has been replaced
+ * with block-specific type (BLK_OPEN_*) and sb_open_mode() helper has
+ * been added to simplify calculating its value from mount flags.
+ */
+#ifndef HAVE_BLK_MODE_T
+# define HAVE_BLK_MODE_T \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -289,6 +300,12 @@ compat_submit_bh(int mode, int mode_flags, struct buffer_head *bh)
 	blkdev_get_by_path(dev_name, mode, holder)
 #define compat_blkdev_put(bdev, mode, holder) \
 	blkdev_put(bdev, mode)
+#endif
+
+#if !HAVE_BLK_MODE_T
+typedef fmode_t blk_mode_t;
+#define sb_open_mode(flags) \
+	(FMODE_READ | FMODE_EXCL | (((flags) & SB_RDONLY) ? 0 : FMODE_WRITE))
 #endif
 
 #endif /* NILFS_KERN_FEATURE_H */
