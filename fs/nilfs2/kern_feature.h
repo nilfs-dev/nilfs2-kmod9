@@ -56,6 +56,11 @@
 #   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
 #  endif
+#  if (RHEL_MINOR > 2)				/* RHEL_RELEASE_N >= 285 */
+#   define	HAVE_AOPS_READ_FOLIO		1
+#   define	HAVE_WRITE_BEGIN_FLAGS		0
+#   define	HAVE_FILEMAP_GET_FOLIOS		1
+#  endif
 # endif
 #endif
 
