@@ -4,7 +4,7 @@ nilfs2-kmod9-1.14  Wed Oct 4, 2023 JST
 	  - Allow switching between new and old blkdev_{get_by_*,put}()
 	  - Allow to remove sb->s_mode for newer kernels
 	  - Support blk_mode_t type and sb_open_mode() helper introduction
-	* backport one fix for a potential user-after-free issue in a
+	* backport one fix for a potential use-after-free issue in a
 	  GC-related routine:
 	  - nilfs2: fix potential use after free in
 	    nilfs_gccache_submit_read_data()
