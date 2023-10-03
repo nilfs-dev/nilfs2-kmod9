@@ -1313,7 +1313,7 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 	if (!(flags & SB_RDONLY))
 		mode |= FMODE_WRITE;
 
-	sd.bdev = blkdev_get_by_path(dev_name, mode, fs_type);
+	sd.bdev = compat_blkdev_get_by_path(dev_name, mode, fs_type, NULL);
 	if (IS_ERR(sd.bdev))
 		return ERR_CAST(sd.bdev);
 
@@ -1385,7 +1385,7 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 	}
 
 	if (!s_new)
-		blkdev_put(sd.bdev, mode);
+		compat_blkdev_put(sd.bdev, mode, fs_type);
 
 	return root_dentry;
 
@@ -1394,7 +1394,7 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 
  failed:
 	if (!s_new)
-		blkdev_put(sd.bdev, mode);
+		compat_blkdev_put(sd.bdev, mode, fs_type);
 	return ERR_PTR(err);
 }
 

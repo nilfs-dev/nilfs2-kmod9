@@ -44,6 +44,9 @@
 #  if (RHEL_RELEASE_N >= 295)
 #   define	HAVE_TIMER_SHUTDOWN_SYNC	1
 #  endif
+#  if (RHEL_RELEASE_N >= 370)
+#   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -64,6 +67,9 @@
 #   define	HAVE_WRITE_BEGIN_FLAGS		0
 #   define	HAVE_FILEMAP_GET_FOLIOS		1
 #   define	HAVE_TIMER_SHUTDOWN_SYNC	1
+#  endif
+#  if (RHEL_MINOR > 3)				/* RHEL_RELEASE_N >= 363 */
+#   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
 #  endif
 # endif
 #endif
@@ -186,6 +192,15 @@
 # define HAVE_TIMER_SHUTDOWN_SYNC \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0))
 #endif
+/*
+ * In kernel 6.5, an argument was added to blkdev_get_by_*() that takes
+ * a pointer to a blk_holder_ops structure for exclusive claims, and
+ * blkdev_put() has been changed not to use FMODE_EXCL flag.
+ */
+#ifndef HAVE_NEW_BLKDEV_GET_AND_PUT
+# define HAVE_NEW_BLKDEV_GET_AND_PUT \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -254,5 +269,17 @@ compat_submit_bh(int mode, int mode_flags, struct buffer_head *bh)
 	return submit_bh(mode, mode_flags, bh);
 #endif
 }
+
+#if HAVE_NEW_BLKDEV_GET_AND_PUT
+#define compat_blkdev_get_by_path(dev_name, mode, holder, hops) \
+	blkdev_get_by_path(dev_name, mode, holder, hops)
+#define compat_blkdev_put(bdev, mode, holder) \
+	blkdev_put(bdev, holder)
+#else
+#define compat_blkdev_get_by_path(dev_name, mode, holder, hops) \
+	blkdev_get_by_path(dev_name, mode, holder)
+#define compat_blkdev_put(bdev, mode, holder) \
+	blkdev_put(bdev, mode)
+#endif
 
 #endif /* NILFS_KERN_FEATURE_H */
