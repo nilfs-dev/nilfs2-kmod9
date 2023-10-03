@@ -41,6 +41,9 @@
 #   define	HAVE_WRITE_BEGIN_FLAGS		0
 #   define	HAVE_FILEMAP_GET_FOLIOS		1
 #  endif
+#  if (RHEL_RELEASE_N >= 295)
+#   define	HAVE_TIMER_SHUTDOWN_SYNC	1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -60,6 +63,7 @@
 #   define	HAVE_AOPS_READ_FOLIO		1
 #   define	HAVE_WRITE_BEGIN_FLAGS		0
 #   define	HAVE_FILEMAP_GET_FOLIOS		1
+#   define	HAVE_TIMER_SHUTDOWN_SYNC	1
 #  endif
 # endif
 #endif
@@ -174,12 +178,28 @@
 # define HAVE_FILEMAP_GET_FOLIOS \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 #endif
+/*
+ * timer_shutdown_sync() was added in kernel 6.2 to reliably
+ * deactivate timer for teardown situations.
+ */
+#ifndef HAVE_TIMER_SHUTDOWN_SYNC
+# define HAVE_TIMER_SHUTDOWN_SYNC \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
 #include <linux/blkdev.h>
 #include <linux/fs.h>
 #include <linux/buffer_head.h>
+#include <linux/timer.h>
+
+#if !HAVE_TIMER_SHUTDOWN_SYNC
+static inline int timer_shutdown_sync(struct timer_list *timer)
+{
+	return del_timer_sync(timer);
+}
+#endif
 
 #if !HAVE_BDEV_NR_BYTES
 static inline loff_t bdev_nr_bytes(struct block_device *bdev)
