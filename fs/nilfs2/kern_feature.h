@@ -46,6 +46,7 @@
 #  endif
 #  if (RHEL_RELEASE_N >= 370)
 #   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
+#   define	HAVE_SB_S_MODE			0
 #  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
@@ -70,6 +71,7 @@
 #  endif
 #  if (RHEL_MINOR > 3)				/* RHEL_RELEASE_N >= 363 */
 #   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
+#   define	HAVE_SB_S_MODE			0
 #  endif
 # endif
 #endif
@@ -200,6 +202,13 @@
 #ifndef HAVE_NEW_BLKDEV_GET_AND_PUT
 # define HAVE_NEW_BLKDEV_GET_AND_PUT \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
+#endif
+/*
+ * sb->s_mode was removed in kernel 6.5.
+ */
+#ifndef HAVE_SB_S_MODE
+# define HAVE_SB_S_MODE \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0))
 #endif
 #endif /* LINUX_VERSION_CODE */
 
