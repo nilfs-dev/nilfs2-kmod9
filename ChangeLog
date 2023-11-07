@@ -1,3 +1,10 @@
+nilfs2-kmod9-1.15  Tue Nov 7, 2023 JST
+
+	* fix a build issue on newer RHEL 9 kernels (RHEL_RELEASE >= 381):
+	  - Allow switching between find_get_pages_contig and
+	    filemap_get_folios_contig
+	* fix a typo in this ChangeLog
+
 nilfs2-kmod9-1.14  Wed Oct 4, 2023 JST
 
 	* fix build issues on newer RHEL 9 kernels (RHEL_RELEASE >= 370):
