@@ -49,6 +49,9 @@
 #   define	HAVE_SB_S_MODE			0
 #   define	HAVE_BLK_MODE_T			1
 #  endif
+#  if (RHEL_RELEASE_N >= 381)
+#   define	HAVE_FILEMAP_GET_FOLIOS_CONTIG	1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -74,6 +77,7 @@
 #   define	HAVE_NEW_BLKDEV_GET_AND_PUT	1
 #   define	HAVE_SB_S_MODE			0
 #   define	HAVE_BLK_MODE_T			1
+#   define	HAVE_FILEMAP_GET_FOLIOS_CONTIG	1
 #  endif
 # endif
 #endif
@@ -187,6 +191,14 @@
 #ifndef HAVE_FILEMAP_GET_FOLIOS
 # define HAVE_FILEMAP_GET_FOLIOS \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#endif
+/*
+ * In kernel 6.1, find_get_pages_contig() was replaced with
+ * filemap_get_folios_contig().
+ */
+#ifndef HAVE_FILEMAP_GET_FOLIOS_CONTIG
+# define HAVE_FILEMAP_GET_FOLIOS_CONTIG \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 #endif
 /*
  * timer_shutdown_sync() was added in kernel 6.2 to reliably

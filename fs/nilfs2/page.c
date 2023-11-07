@@ -546,6 +546,64 @@ unsigned long nilfs_find_uncommitted_extent(struct inode *inode,
 					    sector_t start_blk,
 					    sector_t *blkoff)
 {
+#if HAVE_FILEMAP_GET_FOLIOS_CONTIG
+	unsigned int i, nr_folios;
+	pgoff_t index;
+	unsigned long length = 0;
+	struct folio_batch fbatch;
+	struct folio *folio;
+
+	if (inode->i_mapping->nrpages == 0)
+		return 0;
+
+	index = start_blk >> (PAGE_SHIFT - inode->i_blkbits);
+
+	folio_batch_init(&fbatch);
+
+repeat:
+	nr_folios = filemap_get_folios_contig(inode->i_mapping, &index, ULONG_MAX,
+			&fbatch);
+	if (nr_folios == 0)
+		return length;
+
+	i = 0;
+	do {
+		folio = fbatch.folios[i];
+
+		folio_lock(folio);
+		if (folio_buffers(folio)) {
+			struct buffer_head *bh, *head;
+			sector_t b;
+
+			b = folio->index << (PAGE_SHIFT - inode->i_blkbits);
+			bh = head = folio_buffers(folio);
+			do {
+				if (b < start_blk)
+					continue;
+				if (buffer_delay(bh)) {
+					if (length == 0)
+						*blkoff = b;
+					length++;
+				} else if (length > 0) {
+					goto out_locked;
+				}
+			} while (++b, bh = bh->b_this_page, bh != head);
+		} else {
+			if (length > 0)
+				goto out_locked;
+		}
+		folio_unlock(folio);
+
+	} while (++i < nr_folios);
+
+	folio_batch_release(&fbatch);
+	cond_resched();
+	goto repeat;
+
+out_locked:
+	folio_unlock(folio);
+	folio_batch_release(&fbatch);
+#else /* HAVE_FILEMAP_GET_FOLIOS_CONTIG */
 	unsigned int i;
 	pgoff_t index;
 	unsigned int nblocks_in_page;
@@ -611,5 +669,6 @@ out_locked:
 	unlock_page(page);
 out:
 	pagevec_release(&pvec);
+#endif /* HAVE_FILEMAP_GET_FOLIOS_CONTIG */
 	return length;
 }
