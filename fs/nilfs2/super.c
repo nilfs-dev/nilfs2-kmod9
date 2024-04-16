@@ -36,6 +36,9 @@
 #include <linux/seq_file.h>
 #include <linux/mount.h>
 #include "kern_feature.h"
+#if HAVE_SETUP_BDEV_SUPER
+#include <linux/fs_context.h>
+#endif
 #include "nilfs.h"
 #include "export.h"
 #include "mdt.h"
@@ -1223,7 +1226,9 @@ static int nilfs_remount(struct super_block *sb, int *flags, char *data)
 }
 
 struct nilfs_super_data {
+#if !HAVE_SETUP_BDEV_SUPER
 	struct block_device *bdev;
+#endif
 	__u64 cno;
 	int flags;
 };
@@ -1290,32 +1295,57 @@ static int nilfs_identify(char *data, struct nilfs_super_data *sd)
 
 static int nilfs_set_bdev_super(struct super_block *s, void *data)
 {
+#if HAVE_SETUP_BDEV_SUPER
+	s->s_dev = *(dev_t *)data;
+#else
 	s->s_bdev = data;
 	s->s_dev = s->s_bdev->bd_dev;
+#endif /* HAVE_SETUP_BDEV_SUPER */
 	return 0;
 }
 
 static int nilfs_test_bdev_super(struct super_block *s, void *data)
 {
+#if HAVE_SETUP_BDEV_SUPER
+	return !(s->s_iflags & SB_I_RETIRED) && s->s_dev == *(dev_t *)data;
+#else
 	return (void *)s->s_bdev == data;
+#endif /* HAVE_SETUP_BDEV_SUPER */
 }
 
 static struct dentry *
 nilfs_mount(struct file_system_type *fs_type, int flags,
 	     const char *dev_name, void *data)
 {
-	struct nilfs_super_data sd;
+	struct nilfs_super_data sd = { .flags = flags };
 	struct super_block *s;
+#if HAVE_SETUP_BDEV_SUPER
+	dev_t dev;
+#else /* HAVE_SETUP_BDEV_SUPER */
 	blk_mode_t mode = sb_open_mode(flags);
 	struct dentry *root_dentry;
-	int err, s_new = false;
+	int s_new = false;
+#endif /* HAVE_SETUP_BDEV_SUPER */
+	int err;
 
+#if HAVE_SETUP_BDEV_SUPER
+	if (nilfs_identify(data, &sd))
+		return ERR_PTR(-EINVAL);
+
+	err = lookup_bdev(dev_name, &dev);
+	if (err)
+		return ERR_PTR(err);
+
+	s = sget(fs_type, nilfs_test_bdev_super, nilfs_set_bdev_super, flags,
+		 &dev);
+	if (IS_ERR(s))
+		return ERR_CAST(s);
+
+#else /* HAVE_SETUP_BDEV_SUPER */
 	sd.bdev = compat_blkdev_get_by_path(dev_name, mode, fs_type, NULL);
 	if (IS_ERR(sd.bdev))
 		return ERR_CAST(sd.bdev);
 
-	sd.cno = 0;
-	sd.flags = flags;
 	if (nilfs_identify((char *)data, &sd)) {
 		err = -EINVAL;
 		goto failed;
@@ -1339,8 +1369,23 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 		err = PTR_ERR(s);
 		goto failed;
 	}
+#endif /* HAVE_SETUP_BDEV_SUPER */
 
 	if (!s->s_root) {
+#if HAVE_SETUP_BDEV_SUPER
+		/*
+		 * We drop s_umount here because we need to open the bdev and
+		 * bdev->open_mutex ranks above s_umount (blkdev_put() ->
+		 * __invalidate_device()). It is safe because we have active sb
+		 * reference and SB_BORN is not set yet.
+		 */
+		up_write(&s->s_umount);
+		err = setup_bdev_super(s, flags, NULL);
+		down_write(&s->s_umount);
+		if (!err)
+			err = nilfs_fill_super(s, data,
+					       flags & SB_SILENT ? 1 : 0);
+#else /* HAVE_SETUP_BDEV_SUPER */
 		s_new = true;
 
 		/* New superblock instance created */
@@ -1351,6 +1396,7 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 		sb_set_blocksize(s, block_size(sd.bdev));
 
 		err = nilfs_fill_super(s, data, flags & SB_SILENT ? 1 : 0);
+#endif /* HAVE_SETUP_BDEV_SUPER */
 		if (err)
 			goto failed_super;
 
@@ -1375,6 +1421,18 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 		}
 	}
 
+#if HAVE_SETUP_BDEV_SUPER
+	if (sd.cno) {
+		struct dentry *root_dentry;
+
+		err = nilfs_attach_snapshot(s, sd.cno, &root_dentry);
+		if (err)
+			goto failed_super;
+		return root_dentry;
+	}
+
+	return dget(s->s_root);
+#else /* HAVE_SETUP_BDEV_SUPER */
 	if (sd.cno) {
 		err = nilfs_attach_snapshot(s, sd.cno, &root_dentry);
 		if (err)
@@ -1387,13 +1445,15 @@ nilfs_mount(struct file_system_type *fs_type, int flags,
 		compat_blkdev_put(sd.bdev, mode, fs_type);
 
 	return root_dentry;
+#endif /* HAVE_SETUP_BDEV_SUPER */
 
  failed_super:
 	deactivate_locked_super(s);
-
+#if !HAVE_SETUP_BDEV_SUPER
  failed:
 	if (!s_new)
 		compat_blkdev_put(sd.bdev, mode, fs_type);
+#endif /* !HAVE_SETUP_BDEV_SUPER */
 	return ERR_PTR(err);
 }
 

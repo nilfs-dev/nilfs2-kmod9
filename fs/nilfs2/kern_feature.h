@@ -52,6 +52,9 @@
 #  if (RHEL_RELEASE_N >= 381)
 #   define	HAVE_FILEMAP_GET_FOLIOS_CONTIG	1
 #  endif
+#  if (RHEL_RELEASE_N >= 435)
+#   define	HAVE_SETUP_BDEV_SUPER		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -78,6 +81,9 @@
 #   define	HAVE_SB_S_MODE			0
 #   define	HAVE_BLK_MODE_T			1
 #   define	HAVE_FILEMAP_GET_FOLIOS_CONTIG	1
+#  endif
+#  if (RHEL_MINOR > 4)				/* RHEL_RELEASE_N >= 430 */
+#   define	HAVE_SETUP_BDEV_SUPER		1
 #  endif
 # endif
 #endif
@@ -233,6 +239,15 @@
 # define HAVE_BLK_MODE_T \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0))
 #endif
+/*
+ * Kernel 6.6 introduced setup_bdev_super(), which sets up a block
+ * device associated with a super block instance for file system
+ * mounting.
+ */
+#ifndef HAVE_SETUP_BDEV_SUPER
+# define HAVE_SETUP_BDEV_SUPER \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -302,22 +317,24 @@ compat_submit_bh(int mode, int mode_flags, struct buffer_head *bh)
 #endif
 }
 
+#if !HAVE_SETUP_BDEV_SUPER
 #if HAVE_NEW_BLKDEV_GET_AND_PUT
 #define compat_blkdev_get_by_path(dev_name, mode, holder, hops) \
 	blkdev_get_by_path(dev_name, mode, holder, hops)
 #define compat_blkdev_put(bdev, mode, holder) \
 	blkdev_put(bdev, holder)
-#else
+#else /* HAVE_NEW_BLKDEV_GET_AND_PUT */
 #define compat_blkdev_get_by_path(dev_name, mode, holder, hops) \
 	blkdev_get_by_path(dev_name, mode, holder)
 #define compat_blkdev_put(bdev, mode, holder) \
 	blkdev_put(bdev, mode)
-#endif
+#endif /* HAVE_NEW_BLKDEV_GET_AND_PUT */
 
 #if !HAVE_BLK_MODE_T
 typedef fmode_t blk_mode_t;
 #define sb_open_mode(flags) \
 	(FMODE_READ | FMODE_EXCL | (((flags) & SB_RDONLY) ? 0 : FMODE_WRITE))
 #endif
+#endif /* !HAVE_SETUP_BDEV_SUPER */
 
 #endif /* NILFS_KERN_FEATURE_H */
