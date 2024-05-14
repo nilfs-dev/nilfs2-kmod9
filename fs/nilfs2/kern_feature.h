@@ -55,6 +55,9 @@
 #  if (RHEL_RELEASE_N >= 435)
 #   define	HAVE_SETUP_BDEV_SUPER		1
 #  endif
+#  if (RHEL_RELEASE_N >= 446)
+#   define	HAVE_VMF_FS_ERROR		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -84,6 +87,7 @@
 #  endif
 #  if (RHEL_MINOR > 4)				/* RHEL_RELEASE_N >= 430 */
 #   define	HAVE_SETUP_BDEV_SUPER		1
+#   define	HAVE_VMF_FS_ERROR		1
 #  endif
 # endif
 #endif
@@ -248,6 +252,15 @@
 # define HAVE_SETUP_BDEV_SUPER \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 #endif
+/*
+ * When CONFIG_BUFFER_HEAD was introduced in kernel 6.6,
+ * block_page_mkwrite_return() was renamed to vmf_fs_error() and
+ * removed from its control.
+ */
+#ifndef HAVE_VMF_FS_ERROR
+# define HAVE_VMF_FS_ERROR \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -336,5 +349,12 @@ typedef fmode_t blk_mode_t;
 	(FMODE_READ | FMODE_EXCL | (((flags) & SB_RDONLY) ? 0 : FMODE_WRITE))
 #endif
 #endif /* !HAVE_SETUP_BDEV_SUPER */
+
+#if !HAVE_VMF_FS_ERROR
+static inline vm_fault_t vmf_fs_error(int ret)
+{
+	return block_page_mkwrite_return(ret);
+}
+#endif /* !HAVE_VMF_FS_ERROR */
 
 #endif /* NILFS_KERN_FEATURE_H */

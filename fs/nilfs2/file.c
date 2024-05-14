@@ -10,6 +10,7 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/writeback.h>
+#include "kern_feature.h"	/* vmf_fs_error */
 #include "nilfs.h"
 #include "segment.h"
 
@@ -114,7 +115,7 @@ static vm_fault_t nilfs_page_mkwrite(struct vm_fault *vmf)
 	wait_on_page_writeback(page);
  out:
 	sb_end_pagefault(inode->i_sb);
-	return block_page_mkwrite_return(ret);
+	return vmf_fs_error(ret);
 }
 
 static const struct vm_operations_struct nilfs_file_vm_ops = {
