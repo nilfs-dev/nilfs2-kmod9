@@ -1,3 +1,11 @@
+nilfs2-kmod9-1.20  Tue May 14, 2024 JST
+
+	* fix a build issue on newer RHEL 9 kernels (RHEL_RELEASE >= 446):
+	  - Make vmf_fs_error() and block_page_mkwrite_return() switchable
+	* backport a fix for one potential array out-of-bounds access issue
+	  around the directory code:
+	  - nilfs2: fix OOB in nilfs_set_de_type
+
 nilfs2-kmod9-1.19  Wed Apr 17, 2024 JST
 
 	* fix an issue where the nilfs2 module built against newer RHEL 9
