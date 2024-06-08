@@ -1,3 +1,16 @@
+nilfs2-kmod9-1.22  Sun Jun 9, 2024 JST
+
+	* backport fixes for a kernel bug that could occur when overwriting
+	  a block device on which nilfs2 is mounted, and for potential FS
+	  corruption when removing or renaming a directory failed with I/O
+	  errors:
+	  - nilfs2: fix potential kernel bug due to lack of writeback flag
+	    waiting
+	  - nilfs2: fix nilfs_empty_dir() misjudgment and long loop on I/O
+	    errors
+	* backport one environment-dependent build warning fix:
+	  - nilfs2: fix out-of-range warning
+
 nilfs2-kmod9-1.21  Mon May 27, 2024 JST
 
 	* backport fixes for a few issues with the log writer, including
