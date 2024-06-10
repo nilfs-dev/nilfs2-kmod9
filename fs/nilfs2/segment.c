@@ -1768,41 +1768,30 @@ static void nilfs_begin_page_io(struct page *page)
 	unlock_page(page);
 }
 
-static void nilfs_segctor_prepare_write(struct nilfs_sc_info *sci)
+/**
+ * nilfs_prepare_write_logs - prepare to write logs
+ * @logs: logs to prepare for writing
+ * @seed: checksum seed value
+ *
+ * nilfs_prepare_write_logs() adds checksums and prepares the block
+ * buffers/pages for writing logs.  In order to stabilize pages of
+ * memory-mapped file blocks by putting them in writeback state before
+ * calculating the checksums, first prepare to write payload blocks other
+ * than segment summary and super root blocks in which the checksums will
+ * be embedded.
+ */
+static void nilfs_prepare_write_logs(struct list_head *logs, u32 seed)
 {
 	struct nilfs_segment_buffer *segbuf;
 	struct page *bd_page = NULL, *fs_page = NULL;
+	struct buffer_head *bh;
 
-	list_for_each_entry(segbuf, &sci->sc_segbufs, sb_list) {
-		struct buffer_head *bh;
-
-		list_for_each_entry(bh, &segbuf->sb_segsum_buffers,
-				    b_assoc_buffers) {
-			if (bh->b_page != bd_page) {
-				if (bd_page) {
-					lock_page(bd_page);
-					wait_on_page_writeback(bd_page);
-					clear_page_dirty_for_io(bd_page);
-					set_page_writeback(bd_page);
-					unlock_page(bd_page);
-				}
-				bd_page = bh->b_page;
-			}
-		}
-
+	/* Prepare to write payload blocks */
+	list_for_each_entry(segbuf, logs, sb_list) {
 		list_for_each_entry(bh, &segbuf->sb_payload_buffers,
 				    b_assoc_buffers) {
-			if (bh == segbuf->sb_super_root) {
-				if (bh->b_page != bd_page) {
-					lock_page(bd_page);
-					wait_on_page_writeback(bd_page);
-					clear_page_dirty_for_io(bd_page);
-					set_page_writeback(bd_page);
-					unlock_page(bd_page);
-					bd_page = bh->b_page;
-				}
+			if (bh == segbuf->sb_super_root)
 				break;
-			}
 			set_buffer_async_write(bh);
 			if (bh->b_page != fs_page) {
 				nilfs_begin_page_io(fs_page);
@@ -1810,6 +1799,40 @@ static void nilfs_segctor_prepare_write(struct nilfs_sc_info *sci)
 			}
 		}
 	}
+	nilfs_begin_page_io(fs_page);
+
+	nilfs_add_checksums_on_logs(logs, seed);
+
+	/* Prepare to write segment summary blocks */
+	list_for_each_entry(segbuf, logs, sb_list) {
+		list_for_each_entry(bh, &segbuf->sb_segsum_buffers,
+				    b_assoc_buffers) {
+			if (bh->b_page == bd_page)
+				continue;
+			if (bd_page) {
+				lock_page(bd_page);
+				wait_on_page_writeback(bd_page);
+				clear_page_dirty_for_io(bd_page);
+				set_page_writeback(bd_page);
+				unlock_page(bd_page);
+			}
+			bd_page = bh->b_page;
+		}
+	}
+
+	/* Prepare to write super root block */
+	bh = NILFS_LAST_SEGBUF(logs)->sb_super_root;
+	if (bh) {
+		if (bh->b_page != bd_page) {
+			lock_page(bd_page);
+			wait_on_page_writeback(bd_page);
+			clear_page_dirty_for_io(bd_page);
+			set_page_writeback(bd_page);
+			unlock_page(bd_page);
+			bd_page = bh->b_page;
+		}
+	}
+
 	if (bd_page) {
 		lock_page(bd_page);
 		wait_on_page_writeback(bd_page);
@@ -1817,7 +1840,6 @@ static void nilfs_segctor_prepare_write(struct nilfs_sc_info *sci)
 		set_page_writeback(bd_page);
 		unlock_page(bd_page);
 	}
-	nilfs_begin_page_io(fs_page);
 }
 
 static int nilfs_segctor_write(struct nilfs_sc_info *sci,
@@ -2207,10 +2229,7 @@ static int nilfs_segctor_do_construct(struct nilfs_sc_info *sci, int mode)
 		nilfs_segctor_update_segusage(sci, nilfs->ns_sufile);
 
 		/* Write partial segments */
-		nilfs_segctor_prepare_write(sci);
-
-		nilfs_add_checksums_on_logs(&sci->sc_segbufs,
-					    nilfs->ns_crc_seed);
+		nilfs_prepare_write_logs(&sci->sc_segbufs, nilfs->ns_crc_seed);
 
 		err = nilfs_segctor_write(sci, nilfs);
 		if (unlikely(err))
