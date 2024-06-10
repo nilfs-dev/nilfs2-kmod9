@@ -1807,6 +1807,7 @@ static void nilfs_prepare_write_logs(struct list_head *logs, u32 seed)
 	list_for_each_entry(segbuf, logs, sb_list) {
 		list_for_each_entry(bh, &segbuf->sb_segsum_buffers,
 				    b_assoc_buffers) {
+			mark_buffer_dirty(bh);
 			if (bh->b_page == bd_page)
 				continue;
 			if (bd_page) {
@@ -1823,6 +1824,7 @@ static void nilfs_prepare_write_logs(struct list_head *logs, u32 seed)
 	/* Prepare to write super root block */
 	bh = NILFS_LAST_SEGBUF(logs)->sb_super_root;
 	if (bh) {
+		mark_buffer_dirty(bh);
 		if (bh->b_page != bd_page) {
 			lock_page(bd_page);
 			wait_on_page_writeback(bd_page);
@@ -3006,8 +3008,6 @@ int nilfs_attach_log_writer(struct super_block *sb, struct nilfs_root *root)
 	nilfs->ns_writer = nilfs_segctor_new(sb, root);
 	if (!nilfs->ns_writer)
 		return -ENOMEM;
-
-	inode_attach_wb(nilfs->ns_bdev->bd_inode, NULL);
 
 	err = nilfs_segctor_start_thread(nilfs->ns_writer);
 	if (unlikely(err))
