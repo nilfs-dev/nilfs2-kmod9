@@ -1080,6 +1080,11 @@ nilfs_fill_super(struct super_block *sb, void *data, int silent)
 	if (err)
 		goto failed_nilfs;
 
+#if HAVE_SUPER_SET_UUID
+	super_set_uuid(sb, nilfs->ns_sbp[0]->s_uuid,
+		       sizeof(nilfs->ns_sbp[0]->s_uuid));
+#endif
+
 	cno = nilfs_last_cno(nilfs);
 	err = nilfs_attach_checkpoint(sb, cno, true, &fsroot);
 	if (err) {
