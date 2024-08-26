@@ -2592,7 +2592,7 @@ static void nilfs_construction_timeout(struct timer_list *t)
 {
 	struct nilfs_sc_info *sci = timer_container_of(sci, t, sc_timer);
 
-	wake_up_process(sci->sc_timer_task);
+	wake_up_process(sci->sc_task);
 }
 
 static void
@@ -2756,7 +2756,6 @@ static int nilfs_segctor_thread(void *arg)
 	struct the_nilfs *nilfs = sci->sc_super->s_fs_info;
 	int timeout = 0;
 
-	sci->sc_timer_task = current;
 	timer_setup(&sci->sc_timer, nilfs_construction_timeout, 0);
 
 	/* start sync. */
