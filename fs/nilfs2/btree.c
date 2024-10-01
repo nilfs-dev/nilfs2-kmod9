@@ -11,6 +11,7 @@
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/pagevec.h>
+#include "kern_feature.h"
 #include "nilfs.h"
 #include "page.h"
 #include "btnode.h"
@@ -2161,7 +2162,11 @@ static void nilfs_btree_lookup_dirty_buffers(struct nilfs_bmap *btree,
 	struct inode *btnc_inode = NILFS_BMAP_I(btree)->i_assoc_inode;
 	struct address_space *btcache = btnc_inode->i_mapping;
 	struct list_head lists[NILFS_BTREE_LEVEL_MAX];
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	struct folio_batch fbatch;
+#else
 	struct pagevec pvec;
+#endif
 	struct buffer_head *bh, *head;
 	pgoff_t index = 0;
 	int level, i;
@@ -2171,6 +2176,23 @@ static void nilfs_btree_lookup_dirty_buffers(struct nilfs_bmap *btree,
 	     level++)
 		INIT_LIST_HEAD(&lists[level]);
 
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	folio_batch_init(&fbatch);
+
+	while (filemap_get_folios_tag(btcache, &index, (pgoff_t)-1,
+				PAGECACHE_TAG_DIRTY, &fbatch)) {
+		for (i = 0; i < folio_batch_count(&fbatch); i++) {
+			bh = head = folio_buffers(fbatch.folios[i]);
+			do {
+				if (buffer_dirty(bh))
+					nilfs_btree_add_dirty_buffer(btree,
+								     lists, bh);
+			} while ((bh = bh->b_this_page) != head);
+		}
+		folio_batch_release(&fbatch);
+		cond_resched();
+	}
+#else /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 	pagevec_init(&pvec);
 
 	while (pagevec_lookup_tag(&pvec, btcache, &index,
@@ -2186,6 +2208,7 @@ static void nilfs_btree_lookup_dirty_buffers(struct nilfs_bmap *btree,
 		pagevec_release(&pvec);
 		cond_resched();
 	}
+#endif /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 
 	for (level = NILFS_BTREE_LEVEL_NODE_MIN;
 	     level < NILFS_BTREE_LEVEL_MAX;

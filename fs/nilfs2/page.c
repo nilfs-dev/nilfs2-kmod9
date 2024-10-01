@@ -241,6 +241,50 @@ static void nilfs_copy_page(struct page *dst, struct page *src, int copy_dirty)
 int nilfs_copy_dirty_pages(struct address_space *dmap,
 			   struct address_space *smap)
 {
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	struct folio_batch fbatch;
+	unsigned int i;
+	pgoff_t index = 0;
+	int err = 0;
+
+	folio_batch_init(&fbatch);
+repeat:
+	if (!filemap_get_folios_tag(smap, &index, (pgoff_t)-1,
+				PAGECACHE_TAG_DIRTY, &fbatch))
+		return 0;
+
+	for (i = 0; i < folio_batch_count(&fbatch); i++) {
+		struct folio *folio = fbatch.folios[i], *dfolio;
+
+		folio_lock(folio);
+		if (unlikely(!folio_test_dirty(folio)))
+			NILFS_PAGE_BUG(&folio->page, "inconsistent dirty state");
+
+		dfolio = filemap_grab_folio(dmap, folio->index);
+		if (IS_ERR(dfolio)) {
+			/* No empty page is added to the page cache */
+			folio_unlock(folio);
+			err = PTR_ERR(dfolio);
+			break;
+		}
+		if (unlikely(!folio_buffers(folio)))
+			NILFS_PAGE_BUG(&folio->page,
+				       "found empty page in dat page cache");
+
+		nilfs_copy_page(&dfolio->page, &folio->page, true);
+		filemap_dirty_folio(folio_mapping(dfolio), dfolio);
+
+		folio_unlock(dfolio);
+		folio_put(dfolio);
+		folio_unlock(folio);
+	}
+	folio_batch_release(&fbatch);
+	cond_resched();
+
+	if (likely(!err))
+		goto repeat;
+	return err;
+#else /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 	struct pagevec pvec;
 	unsigned int i;
 	pgoff_t index = 0;
@@ -282,6 +326,7 @@ repeat:
 	if (likely(!err))
 		goto repeat;
 	return err;
+#endif /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 }
 
 /**
@@ -414,6 +459,34 @@ repeat:
  */
 void nilfs_clear_dirty_pages(struct address_space *mapping)
 {
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	struct folio_batch fbatch;
+	unsigned int i;
+	pgoff_t index = 0;
+
+	folio_batch_init(&fbatch);
+
+	while (filemap_get_folios_tag(mapping, &index, (pgoff_t)-1,
+				PAGECACHE_TAG_DIRTY, &fbatch)) {
+		for (i = 0; i < folio_batch_count(&fbatch); i++) {
+			struct folio *folio = fbatch.folios[i];
+
+			folio_lock(folio);
+
+			/*
+			 * This folio may have been removed from the address
+			 * space by truncation or invalidation when the lock
+			 * was acquired.  Skip processing in that case.
+			 */
+			if (likely(folio->mapping == mapping))
+				nilfs_clear_dirty_page(&folio->page);
+
+			folio_unlock(folio);
+		}
+		folio_batch_release(&fbatch);
+		cond_resched();
+	}
+#else /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 	struct pagevec pvec;
 	unsigned int i;
 	pgoff_t index = 0;
@@ -440,6 +513,7 @@ void nilfs_clear_dirty_pages(struct address_space *mapping)
 		pagevec_release(&pvec);
 		cond_resched();
 	}
+#endif /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 }
 
 /**

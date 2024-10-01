@@ -700,7 +700,11 @@ static size_t nilfs_lookup_dirty_data_buffers(struct inode *inode,
 					      loff_t start, loff_t end)
 {
 	struct address_space *mapping = inode->i_mapping;
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	struct folio_batch fbatch;
+#else
 	struct pagevec pvec;
+#endif
 	pgoff_t index = 0, last = ULONG_MAX;
 	size_t ndirties = 0;
 	int i;
@@ -714,6 +718,49 @@ static size_t nilfs_lookup_dirty_data_buffers(struct inode *inode,
 		index = start >> PAGE_SHIFT;
 		last = end >> PAGE_SHIFT;
 	}
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	folio_batch_init(&fbatch);
+ repeat:
+	if (unlikely(index > last) ||
+	      !filemap_get_folios_tag(mapping, &index, last,
+		      PAGECACHE_TAG_DIRTY, &fbatch))
+		return ndirties;
+
+	for (i = 0; i < folio_batch_count(&fbatch); i++) {
+		struct buffer_head *bh, *head;
+		struct folio *folio = fbatch.folios[i];
+
+		folio_lock(folio);
+		if (unlikely(folio->mapping != mapping)) {
+			/* Exclude folios removed from the address space */
+			folio_unlock(folio);
+			continue;
+		}
+		head = folio_buffers(folio);
+		if (!head) {
+			create_empty_buffers(&folio->page, i_blocksize(inode), 0);
+			head = folio_buffers(folio);
+		}
+		folio_unlock(folio);
+
+		bh = head;
+		do {
+			if (!buffer_dirty(bh) || buffer_async_write(bh))
+				continue;
+			get_bh(bh);
+			list_add_tail(&bh->b_assoc_buffers, listp);
+			ndirties++;
+			if (unlikely(ndirties >= nlimit)) {
+				folio_batch_release(&fbatch);
+				cond_resched();
+				return ndirties;
+			}
+		} while (bh = bh->b_this_page, bh != head);
+	}
+	folio_batch_release(&fbatch);
+	cond_resched();
+	goto repeat;
+#else /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 	pagevec_init(&pvec);
  repeat:
 	if (unlikely(index > last) ||
@@ -752,6 +799,7 @@ static size_t nilfs_lookup_dirty_data_buffers(struct inode *inode,
 	pagevec_release(&pvec);
 	cond_resched();
 	goto repeat;
+#endif /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 }
 
 static void nilfs_lookup_dirty_node_buffers(struct inode *inode,
@@ -759,14 +807,38 @@ static void nilfs_lookup_dirty_node_buffers(struct inode *inode,
 {
 	struct nilfs_inode_info *ii = NILFS_I(inode);
 	struct inode *btnc_inode = ii->i_assoc_inode;
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	struct folio_batch fbatch;
+#else
 	struct pagevec pvec;
+#endif
 	struct buffer_head *bh, *head;
 	unsigned int i;
 	pgoff_t index = 0;
 
 	if (!btnc_inode)
 		return;
+#if HAVE_FILEMAP_GET_FOLIOS_TAG
+	folio_batch_init(&fbatch);
 
+	while (filemap_get_folios_tag(btnc_inode->i_mapping, &index,
+				(pgoff_t)-1, PAGECACHE_TAG_DIRTY, &fbatch)) {
+		for (i = 0; i < folio_batch_count(&fbatch); i++) {
+			bh = head = folio_buffers(fbatch.folios[i]);
+			do {
+				if (buffer_dirty(bh) &&
+						!buffer_async_write(bh)) {
+					get_bh(bh);
+					list_add_tail(&bh->b_assoc_buffers,
+						      listp);
+				}
+				bh = bh->b_this_page;
+			} while (bh != head);
+		}
+		folio_batch_release(&fbatch);
+		cond_resched();
+	}
+#else /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 	pagevec_init(&pvec);
 
 	while (pagevec_lookup_tag(&pvec, btnc_inode->i_mapping, &index,
@@ -786,6 +858,7 @@ static void nilfs_lookup_dirty_node_buffers(struct inode *inode,
 		pagevec_release(&pvec);
 		cond_resched();
 	}
+#endif /* HAVE_FILEMAP_GET_FOLIOS_TAG */
 }
 
 static void nilfs_dispose_list(struct the_nilfs *nilfs,

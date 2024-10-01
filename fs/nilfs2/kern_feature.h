@@ -58,6 +58,9 @@
 #  if (RHEL_RELEASE_N >= 446)
 #   define	HAVE_VMF_FS_ERROR		1
 #  endif
+#  if (RHEL_RELEASE_N >= 513)
+#   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -88,6 +91,9 @@
 #  if (RHEL_MINOR > 4)				/* RHEL_RELEASE_N >= 430 */
 #   define	HAVE_SETUP_BDEV_SUPER		1
 #   define	HAVE_VMF_FS_ERROR		1
+#  endif
+#  if (RHEL_MINOR > 5)				/* RHEL_RELEASE_N >= 505 */
+#   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
 #  endif
 # endif
 #endif
@@ -217,6 +223,14 @@
 #ifndef HAVE_TIMER_SHUTDOWN_SYNC
 # define HAVE_TIMER_SHUTDOWN_SYNC \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0))
+#endif
+/*
+ * filemap_get_folios_tag() was added in kernel 6.3 to replace
+ * pagevec_lookup_tag().
+ */
+#ifndef HAVE_FILEMAP_GET_FOLIOS_TAG
+# define HAVE_FILEMAP_GET_FOLIOS_TAG \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0))
 #endif
 /*
  * In kernel 6.5, an argument was added to blkdev_get_by_*() that takes
