@@ -1,3 +1,8 @@
+nilfs2-kmod9-1.31  Tue Nov 19, 2024 JST
+
+	* fix build issues on the latest RHEL9 kernel (RHEL_RELEASE == 529):
+	  - Allow switching user_namespace and mnt_idmap structures
+
 nilfs2-kmod9-1.30  Thu Nov 14, 2024 JST
 
 	* backport fixes for null pointer dereference bugs that occur when
