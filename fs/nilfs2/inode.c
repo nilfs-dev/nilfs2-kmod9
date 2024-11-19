@@ -15,7 +15,6 @@
 #include <linux/writeback.h>
 #include <linux/uio.h>
 #include <linux/fiemap.h>
-#include "kern_feature.h"	/* aops->{dirty,invalidate,read}_folio */
 #include "nilfs.h"
 #include "btnode.h"
 #include "segment.h"
@@ -422,7 +421,11 @@ struct inode *nilfs_new_inode(struct inode *dir, umode_t mode)
 	ii->i_bh = bh;
 
 	atomic64_inc(&root->inodes_count);
+#if HAVE_USER_NAMESPACE_ARGS
 	inode_init_owner(&init_user_ns, inode, dir, mode);
+#else
+	inode_init_owner(&nop_mnt_idmap, inode, dir, mode);
+#endif
 	inode->i_ino = ino;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 
@@ -1025,7 +1028,11 @@ void nilfs_evict_inode(struct inode *inode)
 	 */
 }
 
+#if HAVE_USER_NAMESPACE_ARGS
 int nilfs_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
+#else
+int nilfs_setattr(struct mnt_idmap *idmap, struct dentry *dentry,
+#endif
 		  struct iattr *iattr)
 {
 	struct nilfs_transaction_info ti;
@@ -1033,7 +1040,11 @@ int nilfs_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
 	struct super_block *sb = inode->i_sb;
 	int err;
 
+#if HAVE_USER_NAMESPACE_ARGS
 	err = setattr_prepare(&init_user_ns, dentry, iattr);
+#else
+	err = setattr_prepare(&nop_mnt_idmap, dentry, iattr);
+#endif
 	if (err)
 		return err;
 
@@ -1048,7 +1059,11 @@ int nilfs_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
 		nilfs_truncate(inode);
 	}
 
+#if HAVE_USER_NAMESPACE_ARGS
 	setattr_copy(&init_user_ns, inode, iattr);
+#else
+	setattr_copy(&nop_mnt_idmap, inode, iattr);
+#endif
 	mark_inode_dirty(inode);
 
 	if (iattr->ia_valid & ATTR_MODE) {
@@ -1064,7 +1079,11 @@ out_err:
 	return err;
 }
 
+#if HAVE_USER_NAMESPACE_ARGS
 int nilfs_permission(struct user_namespace *mnt_userns, struct inode *inode,
+#else
+int nilfs_permission(struct mnt_idmap *idmap, struct inode *inode,
+#endif
 		     int mask)
 {
 	struct nilfs_root *root = NILFS_I(inode)->i_root;
@@ -1073,7 +1092,11 @@ int nilfs_permission(struct user_namespace *mnt_userns, struct inode *inode,
 	    root->cno != NILFS_CPTREE_CURRENT_CNO)
 		return -EROFS; /* snapshot is not writable */
 
+#if HAVE_USER_NAMESPACE_ARGS
 	return generic_permission(&init_user_ns, inode, mask);
+#else
+	return generic_permission(&nop_mnt_idmap, inode, mask);
+#endif
 }
 
 int nilfs_load_inode_block(struct inode *inode, struct buffer_head **pbh)

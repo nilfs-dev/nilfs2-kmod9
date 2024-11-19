@@ -17,7 +17,6 @@
 #include <linux/mount.h>	/* mnt_want_write_file(), mnt_drop_write_file() */
 #include <linux/buffer_head.h>
 #include <linux/fileattr.h>
-#include "kern_feature.h"
 #include "nilfs.h"
 #include "segment.h"
 #include "bmap.h"
@@ -129,7 +128,11 @@ int nilfs_fileattr_get(struct dentry *dentry, struct fileattr *fa)
 /**
  * nilfs_fileattr_set - ioctl to support chattr
  */
+#if HAVE_USER_NAMESPACE_ARGS
 int nilfs_fileattr_set(struct user_namespace *mnt_userns,
+#else
+int nilfs_fileattr_set(struct mnt_idmap *idmap,
+#endif
 		       struct dentry *dentry, struct fileattr *fa)
 {
 	struct inode *inode = d_inode(dentry);
