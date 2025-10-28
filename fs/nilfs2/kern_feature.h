@@ -64,6 +64,9 @@
 #  if (RHEL_RELEASE_N >= 529)
 #   define	HAVE_USER_NAMESPACE_ARGS	0
 #  endif
+#  if (RHEL_RELEASE_N >= 648)
+#   define	HAVE_TIMER_CONTAINER_OF		1
+#  endif
 # else /* !defined(RHEL_RELEASE_N) */
 #  define	HAVE_BD_BDI			0
 #  define	HAVE_BDEV_NR_BYTES		1
@@ -98,6 +101,9 @@
 #  if (RHEL_MINOR > 5)				/* RHEL_RELEASE_N >= 505 */
 #   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
 #   define	HAVE_USER_NAMESPACE_ARGS	0
+#  endif
+#  if (RHEL_MINOR > 7)				/* RHEL_RELEASE_N >= 612 */
+#   define	HAVE_TIMER_CONTAINER_OF		1
 #  endif
 # endif
 #endif
@@ -287,6 +293,13 @@
 # define HAVE_VMF_FS_ERROR \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 #endif
+/*
+ * from_timer() was replaced with timer_container_of() in kernel 6.16.
+ */
+#ifndef HAVE_TIMER_CONTAINER_OF
+# define HAVE_TIMER_CONTAINER_OF \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 16, 0))
+#endif
 #endif /* LINUX_VERSION_CODE */
 
 
@@ -382,5 +395,10 @@ static inline vm_fault_t vmf_fs_error(int ret)
 	return block_page_mkwrite_return(ret);
 }
 #endif /* !HAVE_VMF_FS_ERROR */
+
+#if !HAVE_TIMER_CONTAINER_OF
+#define timer_container_of(var, callback_timer, timer_fieldname) \
+	from_timer(var, callback_timer, timer_fieldname)
+#endif /* !HAVE_TIMER_CONTAINER_OF */
 
 #endif /* NILFS_KERN_FEATURE_H */
