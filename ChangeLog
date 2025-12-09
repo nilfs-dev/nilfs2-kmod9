@@ -1,3 +1,17 @@
+nilfs2-kmod9-1.35  Tue Dec 9, 2025 JST
+
+	* fix build issue occuring with the newer RHEL 9 kernel
+	  (RHEL_RELEASE = 648):
+	  - Allow switching between from_timer and timer_container_of
+
+	* backport a fix for a CFI failure that occurred when accessing a
+	  sysfs file in the debug environment:
+	  - nilfs2: fix CFI failure when accessing /sys/fs/nilfs2/features/*
+
+	* backport a fix for missing sanity checks for file type anomalies
+	  that could occur on corrupted filesystems (as reported by syzbot):
+	  - nilfs2: reject invalid file types when reading inodes
+
 nilfs2-kmod9-1.34  Tue Jun 3, 2025 JST
 
 	* backport fixes for one missed check for block mapping anomalies
