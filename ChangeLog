@@ -1,3 +1,15 @@
+nilfs2-kmod9-1.36  Mon Feb 16, 2026 JST
+
+	* backport a fix for a potential block overflow during FITRIM
+	  operations that could lead to a system hang:
+	  - nilfs2: Fix potential block overflow that cause system hang
+
+	* backport fixes to eliminate kernel-doc warnings by adding missing
+	  keywords and converting comments for on-disk structures to the proper
+	  kernel-doc format:
+	  - nilfs2: fix missing struct keywords in nilfs2_api.h kernel-doc
+	  - nilfs2: convert nilfs_super_block to kernel-doc
+
 nilfs2-kmod9-1.35  Tue Dec 9, 2025 JST
 
 	* fix build issue occuring with the newer RHEL 9 kernel
