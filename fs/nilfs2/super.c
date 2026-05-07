@@ -1093,7 +1093,7 @@ nilfs_fill_super(struct super_block *sb, void *data, int silent)
 
 #if HAVE_BD_BDI
 	sb->s_bdi = bdi_get(sb->s_bdev->bd_bdi);
-#else
+#elif !HAVE_SETUP_BDEV_SUPER
 	sb->s_bdi = bdi_get(sb->s_bdev->bd_disk->bdi);
 #endif
 
