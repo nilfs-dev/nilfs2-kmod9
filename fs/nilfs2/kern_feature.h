@@ -36,6 +36,9 @@
 #   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
 #  endif
+#  if (RHEL_RELEASE_N >= 226)
+#   define	HAVE_STRTOMEM_PAD		1
+#  endif
 #  if (RHEL_RELEASE_N >= 293)
 #   define	HAVE_AOPS_READ_FOLIO		1
 #   define	HAVE_WRITE_BEGIN_FLAGS		0
@@ -84,6 +87,7 @@
 #   define	HAVE_AOPS_DIRTY_FOLIO		1
 #   define	HAVE_BDI_WRITE_CONGESTED	0
 #   define	HAVE_BLK_OPF_T			1
+#   define	HAVE_STRTOMEM_PAD		1
 #  endif
 #  if (RHEL_MINOR > 2)				/* RHEL_RELEASE_N >= 285 */
 #   define	HAVE_AOPS_READ_FOLIO		1
@@ -231,6 +235,15 @@
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 #endif
 /*
+ * strtomem_pad() was added in kernel 6.1 as a replacement for strncpy()
+ * uses where the destination is not a NULL-terminated string, but with
+ * bounds checking on the source size, and an explicit padding character.
+ */
+#ifndef HAVE_STRTOMEM_PAD
+# define HAVE_STRTOMEM_PAD \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#endif
+/*
  * timer_shutdown_sync() was added in kernel 6.2 to reliably
  * deactivate timer for teardown situations.
  */
@@ -319,7 +332,18 @@
 #include <linux/blkdev.h>
 #include <linux/fs.h>
 #include <linux/buffer_head.h>
+#include <linux/string.h>		/* memcpy_and_pad() */
 #include <linux/timer.h>
+
+#if !HAVE_STRTOMEM_PAD
+#define strtomem_pad(dest, src, pad)	do {				\
+	const size_t _dest_len = __builtin_object_size(dest, 1);	\
+									\
+	BUILD_BUG_ON(!__builtin_constant_p(_dest_len) ||		\
+		     _dest_len == (size_t)-1);				\
+	memcpy_and_pad(dest, _dest_len, src, strnlen(src, _dest_len), pad); \
+} while (0)
+#endif
 
 #if !HAVE_TIMER_SHUTDOWN_SYNC
 static inline int timer_shutdown_sync(struct timer_list *timer)
