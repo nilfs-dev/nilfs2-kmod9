@@ -61,6 +61,9 @@
 #  if (RHEL_RELEASE_N >= 446)
 #   define	HAVE_VMF_FS_ERROR		1
 #  endif
+#  if (RHEL_RELEASE_N >= 494)
+#   define	HAVE_MEMTOSTR_PAD		1
+#  endif
 #  if (RHEL_RELEASE_N >= 513)
 #   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
 #  endif
@@ -104,6 +107,7 @@
 #  if (RHEL_MINOR > 4)				/* RHEL_RELEASE_N >= 430 */
 #   define	HAVE_SETUP_BDEV_SUPER		1
 #   define	HAVE_VMF_FS_ERROR		1
+#   define	HAVE_MEMTOSTR_PAD		1
 #  endif
 #  if (RHEL_MINOR > 5)				/* RHEL_RELEASE_N >= 505 */
 #   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
@@ -320,6 +324,14 @@
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
 #endif
 /*
+ * memtostr_pad() was added in kernel 6.10 as a replacement for
+ * strncpy() uses where the source is not a NULL-terminated string,
+ */
+#ifndef HAVE_MEMTOSTR_PAD
+# define HAVE_MEMTOSTR_PAD \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0))
+#endif
+/*
  * from_timer() was replaced with timer_container_of() in kernel 6.16.
  */
 #ifndef HAVE_TIMER_CONTAINER_OF
@@ -342,6 +354,22 @@
 	BUILD_BUG_ON(!__builtin_constant_p(_dest_len) ||		\
 		     _dest_len == (size_t)-1);				\
 	memcpy_and_pad(dest, _dest_len, src, strnlen(src, _dest_len), pad); \
+} while (0)
+#endif
+
+#if !HAVE_MEMTOSTR_PAD
+#define memtostr_pad(dest, src)		do {				\
+	const size_t _dest_len = __builtin_object_size(dest, 1);	\
+	const size_t _src_len = __builtin_object_size(src, 1);		\
+	const size_t _src_chars = strnlen(src, _src_len);		\
+	const size_t _copy_len = min(_dest_len - 1, _src_chars);	\
+									\
+	BUILD_BUG_ON(!__builtin_constant_p(_dest_len) ||		\
+		     !__builtin_constant_p(_src_len) ||			\
+		     _dest_len == 0 || _dest_len == (size_t)-1 ||	\
+		     _src_len == 0 || _src_len == (size_t)-1);		\
+	memcpy(dest, src, _copy_len);					\
+	memset(&dest[_copy_len], 0, _dest_len - _copy_len);		\
 } while (0)
 #endif
 
