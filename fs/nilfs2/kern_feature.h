@@ -64,6 +64,9 @@
 #  if (RHEL_RELEASE_N >= 529)
 #   define	HAVE_USER_NAMESPACE_ARGS	0
 #  endif
+#  if (RHEL_RELEASE_N >= 570)
+#   define	HAVE_SUPER_SET_UUID		1
+#  endif
 #  if (RHEL_RELEASE_N >= 648)
 #   define	HAVE_TIMER_CONTAINER_OF		1
 #  endif
@@ -101,6 +104,7 @@
 #  if (RHEL_MINOR > 5)				/* RHEL_RELEASE_N >= 505 */
 #   define	HAVE_FILEMAP_GET_FOLIOS_TAG	1
 #   define	HAVE_USER_NAMESPACE_ARGS	0
+#   define	HAVE_SUPER_SET_UUID		1
 #  endif
 #  if (RHEL_MINOR > 7)				/* RHEL_RELEASE_N >= 612 */
 #   define	HAVE_TIMER_CONTAINER_OF		1
@@ -292,6 +296,15 @@
 #ifndef HAVE_VMF_FS_ERROR
 # define HAVE_VMF_FS_ERROR \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+#endif
+/*
+ * super_set_uuid() helper was introduced in kernel 6.9 to provide a
+ * common way to expose the UUID of a filesystem partition via the
+ * FS_IOC_GETUUID ioctl.
+ */
+#ifndef HAVE_SUPER_SET_UUID
+# define HAVE_SUPER_SET_UUID \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 9, 0))
 #endif
 /*
  * from_timer() was replaced with timer_container_of() in kernel 6.16.
