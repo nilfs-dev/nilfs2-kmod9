@@ -1,3 +1,115 @@
+nilfs2-kmod9-2.0  Fri Oct 23, 2026 JST
+
+	* backport changes to support retrieving the UUID, and retrieving and
+	  setting the label of a mounted filesystem, utilizing generic helpers
+	  introduced mid-cycle in the RHEL 9 kernel:
+	  - Add feature test macro for super_set_uuid()
+	  - nilfs2: add support for FS_IOC_GETUUID
+	  - Allow use of strtomem_pad()
+	  - Allow use of memtostr_pad()
+	  - nilfs2: add support for FS_IOC_GETFSLABEL
+	  - nilfs2: add support for FS_IOC_SETFSLABEL
+
+	* backport a fix to prevent out-of-bounds memory reads in readdir by
+	  validating directory offsets set via llseek:
+	  - nilfs2: validate directory position after llseek in readdir
+
+	* backport fixes to tighten sanity checks during "dsync" roll-forward
+	  recovery, preventing potential crashes or underflows:
+	  - nilfs2: reject non-regular inodes in dsync recovery
+	  - nilfs2: validate file block counts during recovery
+
+	* backport a fix to prevent link count underflow that can occur when
+	  deleting a corrupted directory:
+	  - nilfs2: fix link count underflow when removing corrupted directory
+
+	* backport a workaround to prevent dcache inconsistencies caused by
+	  non-fatal signals interrupting synchronous log writes during
+	  directory operations:
+	  - nilfs2: ignore non-fatal signals during synchronous log write wait
+
+	* backport a fix to resolve a potential deadlock between synchronous
+	  inode eviction and concurrent inode allocation:
+	  - nilfs2: fix deadlock between nilfs_evict_inode() and find_inode()
+
+	* backport a fix for a use-after-free issue on checkpoint root objects
+	  caused by failure during sysfs attribute group creation:
+	  - nilfs2: fix checkpoint root lifetime on sysfs errors
+
+	* backport a fix for a kernel warning triggered by remaining dirty
+	  folios during page cache rollback from the DAT shadow map:
+	  - nilfs2: force clear dirty state when restoring from the shadow map
+
+	* backport a fix for potential out-of-bounds array access due to an
+	  unvalidated starting segment number:
+	  - nilfs2: validate segment number in nilfs_sufile_get_suinfo()
+
+	* backport strict consistency checks for direct block mapping updates
+	  to prevent out-of-bounds memory accesses:
+	  - nilfs2: strengthen consistency checks in nilfs_direct_propagate()
+
+	* backport a series of refactoring changes for the log writer, along
+	  with subsequent fixes, to resolve dependency issues for maintenance
+	  backports:
+	  - nilfs2: prepare backing device folios for writing after adding
+	    checksums (a page-based variant)
+	  - nilfs2: do not call inode_attach_wb() directly
+	  - nilfs2: remove sc_timer_task
+	  - nilfs2: use kthread_create and kthread_stop for the log writer
+	    thread
+	  - nilfs2: refactor nilfs_segctor_thread()
+	  - nilfs2: avoid having an active sc_timer before freeing sci
+	  - nilfs2: clear dirty flag on bdev buffers on log write failure
+
+	* backport a series of patches replacing the use of "kmap" and
+	  "kmap_atomic" with "kmap_local", to resolve dependency issues for
+	  maintenance backports:
+	  - nilfs2: convert recovery logic to use kmap_local
+	  - nilfs2: convert segment buffer to use kmap_local
+	  - nilfs2: convert nilfs_copy_buffer() to use kmap_local
+	  - nilfs2: convert metadata file common code to use kmap_local
+	  - nilfs2: convert sufile to use kmap_local
+	  - nilfs2: convert persistent object allocator to use kmap_local
+	  - nilfs2: convert DAT to use kmap_local
+	  - nilfs2: move nilfs_bmap_write call out of nilfs_write_inode_common
+	  - nilfs2: do not acquire rwsem in nilfs_bmap_write()
+	  - nilfs2: convert ifile to use kmap_local
+	  - nilfs2: localize highmem mapping for checkpoint creation within
+	    cpfile
+	  - nilfs2: localize highmem mapping for checkpoint finalization
+	    within cpfile
+	  - nilfs2: localize highmem mapping for checkpoint reading within
+	    cpfile
+	  - nilfs2: remove nilfs_cpfile_{get,put}_checkpoint()
+	  - nilfs2: convert cpfile to use kmap_local
+	  - nilfs2: convert nilfs_make_empty() to use kmap_local
+
+	* backport patch series that fix or improve kernel-doc comments, to
+	  resolve dependency issues for maintenance backports:
+	  - nilfs2: add missing argument descriptions for ioctl-related helpers
+	  - nilfs2: improve kernel-doc comments for b-tree node helpers
+	  - nilfs2: fix incorrect kernel-doc declaration of nilfs_palloc_req
+	    structure
+	  - nilfs2: add missing description of nilfs_btree_path structure
+	  - nilfs2: describe the members of nilfs_bmap_operations structure
+	  - nilfs2: fix inconsistencies in kernel-doc comments in segment.h
+	  - nilfs2: fix missing initial short descriptions of kernel-doc
+	    comments
+	  - nilfs2: correct return value kernel-doc descriptions for bmap
+	    functions
+	  - nilfs2: correct return value kernel-doc descriptions for sufile
+	  - nilfs2: correct return value kernel-doc descriptions for metadata
+	    files
+	  - nilfs2: correct return value kernel-doc descriptions for the rest
+	  - nilfs2: add missing return value kernel-doc descriptions
+	  - nilfs2: revise the return value description style for consistency.
+
+	* backport code cleanup changes:
+	  - nilfs2: remove '#if 0' code blocks
+
+	* backport a documentation fix:
+	  - nilfs2: fix typos in comments
+
 nilfs2-kmod9-1.39  Thu Aug 20, 2026 JST
 
 	* backport a fix for an out-of-bounds memory access issue in direct
